@@ -6,6 +6,29 @@ import {
   OVERALL_WATER_QUALITY_GUIDE,
 } from "../utils/waterStandards";
 import Webcam from "react-webcam";
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
+import { Bar } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import toast from "react-hot-toast";
+import { useMemo } from "react";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const VALID_WATER_BRANDS = [
   { en: "Bisleri", hi: "बिसलेरी" },
@@ -16,7 +39,6 @@ const VALID_WATER_BRANDS = [
   { en: "Rail Neer", hi: "रेल नीर" },
   { en: "Oxyrich", hi: "ऑक्सीरीच" },
   { en: "Vedica", hi: "वेदिका" },
-  { en: "Bailey", hi: "बेली" },
   { en: "Qua", hi: "क्वा" },
 ];
 
@@ -63,10 +85,14 @@ const OCRProcessor = () => {
   const [loading, setLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
   const [useCamera, setUseCamera] = useState(false);
-  // eslint-disable-next-line no-unused-vars
+  const [facingMode, setFacingMode] = useState("environment"); // Default to back camera
   const [selectedStandard, setSelectedStandard] = useState("FSSAI");
   const [brandStatus, setBrandStatus] = useState(null);
   const webcamRef = useRef(null);
+
+  // Detect if the device is mobile
+  // eslint-disable-next-line no-unused-vars
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
   const analyzeWaterQuality = useCallback((data, standardType) => {
     const currentStandards =
@@ -234,7 +260,13 @@ const OCRProcessor = () => {
       setImage(imageSrc);
       setUseCamera(false);
       await extractTextFromImage(imageSrc);
+    } else {
+      toast.error("Failed to capture image. Please try again.");
     }
+  };
+
+  const toggleCamera = () => {
+    setFacingMode(facingMode === "environment" ? "user" : "environment");
   };
 
   const handleManualTextAnalysis = () => {
@@ -260,9 +292,7 @@ const OCRProcessor = () => {
     let hasValues = false;
     let brandState = manualValues.brand
       ? VALID_WATER_BRANDS.find(
-          (b) =>
-            manualValues.brand === b.en ||
-            manualValues.brand === b.hi
+          (b) => manualValues.brand === b.en || manualValues.brand === b.hi
         )
       : null;
     Object.entries(manualValues).forEach(([key, value]) => {
@@ -334,18 +364,89 @@ const OCRProcessor = () => {
     }
   }, [selectedStandard, analyzeWaterQuality, minerals]);
 
+  const chartData = useMemo(() => {
+    if (!analysisResults) return null;
+    const labels = Object.keys(analysisResults).map((key) =>
+      key === "tds"
+        ? "TDS"
+        : key === "ph"
+        ? "pH"
+        : key.charAt(0).toUpperCase() + key.slice(1)
+    );
+    const values = Object.values(analysisResults).map((result) => result.value);
+    const colors = Object.values(analysisResults).map((result) =>
+      result.colorClass.includes("green")
+        ? "rgba(34, 197, 94, 0.6)"
+        : result.colorClass.includes("red")
+        ? "rgba(239, 68, 68, 0.6)"
+        : "rgba(234, 179, 8, 0.6)"
+    );
+    const borderColors = Object.values(analysisResults).map((result) =>
+      result.colorClass.includes("green")
+        ? "rgba(34, 197, 94, 1)"
+        : result.colorClass.includes("red")
+        ? "rgba(239, 68, 68, 1)"
+        : "rgba(234, 179, 8, 1)"
+    );
+    return {
+      labels,
+      datasets: [
+        {
+          label: `Mineral Values (${selectedStandard} Standards)`,
+          data: values,
+          backgroundColor: colors,
+          borderColor: borderColors,
+          borderWidth: 1,
+        },
+      ],
+    };
+  }, [analysisResults, selectedStandard]);
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "top" },
+      title: {
+        display: true,
+        text: `Water Mineral Analysis (${selectedStandard} Standards)`,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: "Value (mg/L or unitless for pH)" },
+      },
+      x: { title: { display: true, text: "Minerals" } },
+    },
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-cyan-50 min-h-screen">
-      <div className="bg-white rounded-2xl shadow-xl p-8">
-        <h1 className="text-4xl font-bold text-center bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-6">
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-blue-100 to-indigo-100 p-4 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <motion.div
+        className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-6 sm:p-8"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl sm:text-4xl font-bold text-center text-indigo-700 mb-6">
           💧 Smart Water Label Analyzer
         </h1>
-        <p className="text-center text-gray-600 mb-8">
+        <p className="text-center text-gray-600 mb-8 text-sm sm:text-base">
           Extract mineral content from water bottle labels using OCR or manual
           entry, and get detailed analysis.
         </p>
-        <div className="flex flex-wrap gap-3 justify-center mb-6">
-          <label className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg cursor-pointer transition-colors">
+        <motion.div
+          className="flex flex-wrap gap-3 justify-center mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <label className="bg-blue-600 hover:bg-blue-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg cursor-pointer transition-colors text-sm sm:text-base">
             📁 Upload Image
             <input
               type="file"
@@ -355,89 +456,151 @@ const OCRProcessor = () => {
               disabled={loading}
             />
           </label>
-          <button
+          <motion.button
             onClick={() => setUseCamera(!useCamera)}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-colors"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
             disabled={loading}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 0 10px rgba(0, 0, 0, 0.2)",
+            }}
+            whileTap={{ scale: 0.95 }}
           >
             📷 {useCamera ? "Hide" : "Use"} Camera
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={clearAll}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg transition-colors"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-colors text-sm sm:text-base"
             disabled={loading}
+            whileHover={{
+              scale: 1.05,
+              boxShadow: "0 0 10px rgba(0, 0, 0, 0.2)",
+            }}
+            whileTap={{ scale: 0.95 }}
           >
             🗑️ Clear All
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
         {useCamera && (
-          <div className="bg-gray-100 rounded-xl p-6 mb-6 text-center flex flex-col items-center">
+          <motion.div
+            className="bg-gray-100 rounded-xl p-4 sm:p-6 mb-6 text-center flex flex-col items-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <Webcam
               audio={false}
               ref={webcamRef}
               screenshotFormat="image/jpeg"
               className="w-full max-w-sm rounded shadow mb-3"
+              videoConstraints={{ facingMode }}
             />
-            <button
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              onClick={capture}
-              disabled={loading}
-            >
-              📸 Capture Photo
-            </button>
-          </div>
+            <div className="flex gap-3">
+              <motion.button
+                className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                onClick={capture}
+                disabled={loading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                📸 Capture Photo
+              </motion.button>
+              <motion.button
+                className="bg-gray-500 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm sm:text-base"
+                onClick={toggleCamera}
+                disabled={loading}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                🔄 Switch to {facingMode === "environment" ? "Front" : "Back"}{" "}
+                Camera
+              </motion.button>
+            </div>
+          </motion.div>
         )}
-        <div className="mb-6">
-          <div className="flex gap-4 mb-4">
-            <button
+        <motion.div
+          className="mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex gap-4 mb-4 justify-center">
+            <motion.button
               onClick={() => setManualInputMode("ocr")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
                 manualInputMode === "ocr"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               📄 OCR / Text Input
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setManualInputMode("individual")}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`px-4 py-2 rounded-lg transition-colors text-sm sm:text-base ${
                 manualInputMode === "individual"
                   ? "bg-blue-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               🔢 Manual Individual Values
-            </button>
+            </motion.button>
+            <motion.select
+              value={selectedStandard}
+              onChange={(e) => setSelectedStandard(e.target.value)}
+              className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+              whileHover={{ scale: 1.05 }}
+            >
+              <option value="FSSAI">FSSAI Standards</option>
+              <option value="WHO">WHO Standards</option>
+            </motion.select>
           </div>
           {manualInputMode === "ocr" ? (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Raw Extracted Text / Paste Text Here
               </label>
-              <textarea
+              <motion.textarea
                 value={ocrText}
                 onChange={(e) => setOcrText(e.target.value)}
                 placeholder="Paste or type the text from your water label here, or upload an image above to extract text automatically..."
                 rows={8}
-                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
                 disabled={loading}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
               />
-              <button
+              <motion.button
                 onClick={handleManualTextAnalysis}
-                className="mt-3 bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                className="mt-3 bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors text-sm sm:text-base"
                 disabled={loading}
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 10px rgba(0, 0, 0, 0.2)",
+                }}
+                whileTap={{ scale: 0.95 }}
               >
                 🧠 Analyze Text
-              </button>
+              </motion.button>
             </div>
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4">
                 Enter Brand and Mineral Values (mg/L or ppm)
               </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <div key="brand" className="space-y-1 col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <motion.div
+                  key="brand"
+                  className="space-y-1 col-span-1 sm:col-span-2"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
                   <label className="block text-xs font-medium text-gray-600">
                     Bottle Brand Name (English/Hindi)
                   </label>
@@ -449,9 +612,11 @@ const OCRProcessor = () => {
                         brand: e.target.value,
                       }))
                     }
-                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm shadow-sm"
                   >
-                    <option value="">Select Brand (or manually type below)</option>
+                    <option value="">
+                      Select Brand (or manually type below)
+                    </option>
                     {VALID_WATER_BRANDS.map((b) => (
                       <option key={b.en} value={b.en}>
                         {b.en} / {b.hi}
@@ -468,13 +633,19 @@ const OCRProcessor = () => {
                         brand: e.target.value,
                       }))
                     }
-                    className="w-full p-2 border border-gray-300 rounded mt-1 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                    className="w-full p-2 border border-gray-300 rounded mt-1 focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm shadow-sm"
                   />
-                </div>
+                </motion.div>
                 {Object.entries(manualValues)
                   .filter(([mineral]) => mineral !== "brand")
-                  .map(([mineral, value]) => (
-                    <div key={mineral} className="space-y-1">
+                  .map(([mineral, value], index) => (
+                    <motion.div
+                      key={mineral}
+                      className="space-y-1"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * index + 0.3 }}
+                    >
                       <label className="block text-xs font-medium text-gray-600 capitalize">
                         {mineral === "tds"
                           ? "TDS"
@@ -495,86 +666,118 @@ const OCRProcessor = () => {
                           }))
                         }
                         placeholder="0.0"
-                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                        className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm shadow-sm"
                       />
-                    </div>
+                    </motion.div>
                   ))}
               </div>
               <div className="flex gap-3 mt-4">
-                <button
+                <motion.button
                   onClick={handleManualIndividualValues}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors"
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors text-sm sm:text-base"
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: "0 0 10px rgba(0, 0, 0, 0.2)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   ✅ Set Values & Analyze
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={clearAll}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors text-sm sm:text-base"
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: "0 0 10px rgba(0, 0, 0, 0.2)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   🗑️ Clear Values
-                </button>
+                </motion.button>
               </div>
             </div>
           )}
-        </div>
+        </motion.div>
+        {loading && (
+          <motion.div
+            className="text-center py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="inline-block h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <p className="mt-2 text-blue-600 font-semibold text-sm sm:text-base">
+              🔍 Processing image... This might take a moment.
+            </p>
+          </motion.div>
+        )}
+        {image && (
+          <motion.div
+            className="mb-6 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="text-lg font-semibold mb-3 text-indigo-700">
+              Image Preview
+            </h3>
+            <div className="inline-block border rounded-lg overflow-hidden shadow-lg">
+              <img
+                src={image}
+                alt="Uploaded water label"
+                className="w-full max-w-xs sm:max-w-sm max-h-64 object-contain"
+              />
+            </div>
+          </motion.div>
+        )}
         {brandStatus && (
-          <div
+          <motion.div
             className={`mb-6 p-4 rounded-lg shadow-md ${
               brandStatus.status === "original"
                 ? "bg-green-50 border-green-200"
-                : brandStatus.status === "fake"
-                ? "bg-red-50 border-red-200"
-                : "bg-yellow-50 border-yellow-200"
+                : "bg-red-50 border-red-200"
             }`}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
-            <h3 className="text-lg font-bold mb-2">
-              {brandStatus.status === "original" && "✅ Authentic Brand"}
-              {brandStatus.status === "fake" && "⚠️ Fake/Suspicious Brand"}
-              {brandStatus.status === "unknown" && "ℹ️ Brand Not Recognized"}
+            <h3 className="text-lg font-bold mb-2 text-indigo-700">
+              {brandStatus.status === "original"
+                ? "✅ Authentic Brand"
+                : "⚠️ Fake/Suspicious Brand"}
             </h3>
-            <p className="text-base">{brandStatus.message}</p>
+            <p className="text-base text-gray-700">{brandStatus.message}</p>
             {brandStatus.brand && (
-              <p className="font-mono text-xl mt-1">
+              <p className="font-mono text-lg mt-1">
                 {typeof brandStatus.brand === "object"
                   ? `${brandStatus.brand.en} / ${brandStatus.brand.hi}`
                   : brandStatus.brand}
               </p>
             )}
-          </div>
-        )}
-        {loading && (
-          <div className="text-center py-8">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="mt-2 text-blue-600 font-semibold">
-              🔍 Processing image... This might take a moment.
-            </p>
-          </div>
-        )}
-        {image && (
-          <div className="mb-6 text-center">
-            <h3 className="text-lg font-semibold mb-3">Image Preview</h3>
-            <div className="inline-block border rounded-lg overflow-hidden shadow-lg">
-              <img
-                src={image}
-                alt="Uploaded water label"
-                className="max-w-sm max-h-64 object-contain"
-              />
-            </div>
-          </div>
+          </motion.div>
         )}
         {confidence !== null && manualInputMode === "ocr" && (
-          <div className="mb-6">
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">
                 OCR Confidence
               </span>
               <span className="text-sm text-gray-600">
-                {confidence !== null ? confidence.toFixed(0) : "-"}%
+                {confidence.toFixed(0)}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full transition-all duration-500 ${
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <motion.div
+                className={`h-2.5 rounded-full transition-all duration-500 ${
                   confidence >= 70
                     ? "bg-green-500"
                     : confidence >= 40
@@ -582,7 +785,10 @@ const OCRProcessor = () => {
                     : "bg-red-500"
                 }`}
                 style={{ width: `${confidence}%` }}
-              ></div>
+                initial={{ width: 0 }}
+                animate={{ width: `${confidence}%` }}
+                transition={{ duration: 0.5, type: "spring", stiffness: 80 }}
+              />
             </div>
             {confidence < 70 && (
               <p className="text-sm text-orange-600 mt-2">
@@ -590,25 +796,33 @@ const OCRProcessor = () => {
                 manual entry for accuracy.
               </p>
             )}
-          </div>
+          </motion.div>
         )}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <motion.div
+            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             <p className="text-red-700 font-medium">{error}</p>
-          </div>
+          </motion.div>
         )}
         {overallQuality && (
-          <div
+          <motion.div
             className={`mb-6 p-4 rounded-lg shadow-md ${overallQuality.color
               .replace("text-", "bg-")
               .replace("-700", "-50")} border ${overallQuality.color
               .replace("text-", "border-")
               .replace("-700", "-200")}`}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
           >
             <h3
-              className={`text-xl font-bold ${overallQuality.color} flex items-center mb-2`}
+              className={`text-xl font-bold ${overallQuality.color} flex items-center mb-2 sticky top-0 bg-inherit z-10`}
             >
-              <span className="mr-2 text-2xl">{overallQuality.icon}</span>{" "}
+              <span className="mr-2 text-2xl">{overallQuality.icon}</span>
               Overall Water Quality ({selectedStandard} Standards)
             </h3>
             <p
@@ -619,21 +833,42 @@ const OCRProcessor = () => {
             >
               {overallQuality.message}
             </p>
-          </div>
+          </motion.div>
+        )}
+        {chartData && (
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <h3 className="text-2xl font-bold text-indigo-700 mb-4 flex items-center sticky top-0 bg-white z-10">
+              📊 Mineral Analysis Chart
+            </h3>
+            <Bar data={chartData} options={chartOptions} />
+          </motion.div>
         )}
         {Object.keys(minerals).length > 0 && analysisResults && (
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold text-green-700 mb-4 flex items-center">
+          <motion.div
+            className="mb-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h3 className="text-2xl font-bold text-indigo-700 mb-4 flex items-center sticky top-0 bg-white z-10">
               📊 Detailed Mineral Analysis ({selectedStandard} Standards)
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {Object.entries(analysisResults).map(([key, result]) => (
-                <div
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {Object.entries(analysisResults).map(([key, result], index) => (
+                <motion.div
                   key={key}
                   className={`border-2 ${result.colorClass.replace(
                     "text-",
                     "border-"
                   )} rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * index + 0.3 }}
                 >
                   <p
                     className={`text-gray-700 font-semibold capitalize text-lg ${result.colorClass}`}
@@ -654,36 +889,31 @@ const OCRProcessor = () => {
                   )}
                   <div className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded">
                     <p className="font-semibold">Reference Values:</p>
-                    <p>
-                      WHO:{" "}
-                      {WHO_STANDARDS[key]
-                        ? `${WHO_STANDARDS[key].min}-${WHO_STANDARDS[key].max} ${WHO_STANDARDS[key].unit}`
-                        : "N/A"}
-                    </p>
-                    <p>
-                      FSSAI:{" "}
-                      {FSSAI_STANDARDS[key]
-                        ? `${FSSAI_STANDARDS[key].min}-${FSSAI_STANDARDS[key].max} ${FSSAI_STANDARDS[key].unit}`
-                        : "N/A"}
-                    </p>
+                    <p>WHO: {result.whoStandard}</p>
+                    <p>FSSAI: {result.fssaiStandard}</p>
                     {result.standardNote && (
                       <p className="mt-1 italic">{result.standardNote}</p>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <motion.div
+          className="bg-blue-50 border border-blue-200 rounded-lg p-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <h4 className="font-semibold text-blue-800 mb-2">
             💡 How to use & Important Notes
           </h4>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>
               • Upload Image/Use Camera: Click to upload an image of your water
-              bottle's mineral label or capture it directly using your camera.
-              The app will automatically try to extract the mineral values.
+              bottle's mineral label or capture it directly using your camera
+              (back camera recommended on mobile).
             </li>
             <li>
               • Text Input: The extracted text will appear in the text area. You
@@ -691,7 +921,8 @@ const OCRProcessor = () => {
               Click "Analyze Text" to process it.
             </li>
             <li>
-              • Manual Individual Values: Enter the brand and each mineral value.
+              • Manual Individual Values: Enter the brand and each mineral
+              value.
             </li>
             <li>
               • Analyze with WHO/FSSAI: Choose between WHO Guidelines or FSSAI
@@ -722,9 +953,9 @@ const OCRProcessor = () => {
               </ul>
             </li>
           </ul>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 
