@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
-  "https://smartcare-xi.vercel.app",
+  "https://determine-water-quality.vercel.app",
   "http://localhost:5173",
 ];
 app.use(
