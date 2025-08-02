@@ -53,6 +53,9 @@ const Profile = () => {
   const handleLog = () => {
     navigate("/water-log");
   };
+const handleQuality = () => {
+    navigate("/water-quality");
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 to-indigo-100 p-4">
@@ -108,6 +111,12 @@ const Profile = () => {
             className="w-full py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
           >
             Water Log
+          </button>
+          <button
+            onClick={handleQuality}
+            className="w-full py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
+          >
+            Determine Water Quality
           </button>
         </div>
       ) : (

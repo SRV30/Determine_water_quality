@@ -7,6 +7,7 @@ import Profile from "./pages/Profile";
 import WaterPrediction from "./pages/WaterPrediction";
 import HealthInfoForm from "./pages/HealthInfoForm";
 import WaterLog from "./pages/WaterLog";
+import WaterQualityAnalyzer from "./pages/WaterQualityAnalyzer";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/profile" element={<Profile />} />{" "}
         <Route path="/water-log" element={<WaterLog />} />
+        <Route path="/water-quality" element={<WaterQualityAnalyzer />} />
         <Route path="/health" element={<HealthInfoForm />} />
         <Route path="/water" element={<WaterPrediction />} />
       </Routes>

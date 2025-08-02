@@ -85,12 +85,11 @@ const OCRProcessor = () => {
   const [loading, setLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
   const [useCamera, setUseCamera] = useState(false);
-  const [facingMode, setFacingMode] = useState("environment"); // Default to back camera
+  const [facingMode, setFacingMode] = useState("environment");
   const [selectedStandard, setSelectedStandard] = useState("FSSAI");
   const [brandStatus, setBrandStatus] = useState(null);
   const webcamRef = useRef(null);
 
-  // Detect if the device is mobile
   // eslint-disable-next-line no-unused-vars
   const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
