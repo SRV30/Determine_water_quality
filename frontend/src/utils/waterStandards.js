@@ -1,0 +1,208 @@
+// src/utils/waterStandards.js // बदला गया
+
+export const WHO_STANDARDS = {
+  calcium: {
+    min: 0,
+    max: 200,
+    unit: "mg/L",
+    impact: "Essential for bone health; contributes to hardness. Very high levels can cause scaling.",
+    note: "No health-based guideline value, common range.",
+  },
+  magnesium: {
+    min: 0,
+    max: 150,
+    unit: "mg/L",
+    impact: "Essential mineral; contributes to hardness. High levels can have a laxative effect.",
+    note: "No health-based guideline value, taste/laxative effect.",
+  },
+  potassium: {
+    min: 0,
+    max: 50,
+    unit: "mg/L",
+    impact: "Electrolyte, important for nerve and muscle function. Generally safe unless kidney issues.",
+    note: "No health-based guideline value, common range.",
+  },
+  sodium: {
+    min: 0,
+    max: 200,
+    unit: "mg/L",
+    impact: "High levels can be a concern for individuals on low-sodium diets and affect taste.",
+    note: "Aesthetic guideline for taste.",
+  },
+  bicarbonate: {
+    min: 0,
+    max: 500,
+    unit: "mg/L",
+    impact: "Buffers pH, contributes to alkalinity. Very high levels can cause digestive issues or scaling.",
+    note: "No specific WHO guideline; general range.",
+  },
+  chloride: {
+    min: 0,
+    max: 250,
+    unit: "mg/L",
+    impact: "High levels can impart a salty taste and indicate pollution.",
+    note: "Aesthetic guideline for taste.",
+  },
+  sulphate: {
+    min: 0,
+    max: 400,
+    unit: "mg/L",
+    impact: "High levels can have a laxative effect and cause taste issues.",
+    note: "Aesthetic guideline for taste/laxative effect.",
+  },
+  nitrate: {
+    min: 0,
+    max: 50,
+    unit: "mg/L",
+    impact: "High levels can be dangerous, especially for infants (blue baby syndrome). Indicative of agricultural runoff.",
+    note: "Health-based guideline.",
+  },
+  fluoride: {
+    min: 0.5,
+    max: 1.5,
+    unit: "mg/L",
+    impact: "Optimal levels prevent tooth decay; excessive levels can cause dental and skeletal fluorosis.",
+    note: "Health-based guideline. Optimal range 0.5-1.0 mg/L.",
+  },
+  tds: {
+    min: 0,
+    max: 1000,
+    unit: "mg/L",
+    impact: "Total Dissolved Solids. High TDS can affect taste and cause scaling; very low TDS might be less palatable.",
+    note: "Aesthetic guideline for taste. No direct health guideline.",
+    quality_mapping: [
+      { range: [0, 300], status: "Excellent", color: "text-green-600" },
+      { range: [301, 600], status: "Good", color: "text-lime-600" },
+      { range: [601, 900], status: "Fair", color: "text-yellow-600" },
+      { range: [901, 1000], status: "Poor", color: "text-orange-600" },
+      { range: [1001, Infinity], status: "Unsuitable", color: "text-red-600" },
+    ],
+  },
+  ph: {
+    min: 6.5,
+    max: 8.5,
+    unit: "pH units",
+    impact: "Measures acidity/alkalinity. Deviations can cause corrosion or scale formation and affect taste.",
+    note: "No health-based guideline value, aesthetic/operational.",
+    quality_mapping: [
+      { range: [0, 6.4], status: "Acidic", color: "text-red-600" },
+      { range: [6.5, 8.5], status: "Optimal", color: "text-green-600" },
+      { range: [8.6, Infinity], status: "Alkaline", color: "text-red-600" },
+    ],
+  },
+};
+
+export const FSSAI_STANDARDS = {
+  calcium: {
+    min: 10,
+    max: 75,
+    unit: "mg/L",
+    impact: "Essential for bone health; contributes to hardness. High levels can cause scaling.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  magnesium: {
+    min: 5,
+    max: 30,
+    unit: "mg/L",
+    impact: "Essential mineral; contributes to hardness. High levels can have a laxative effect.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  potassium: {
+    min: 0,
+    max: 12,
+    unit: "mg/L",
+    impact: "Electrolyte, important for nerve and muscle function. Generally safe at higher levels unless kidney issues.",
+    note: "Not explicitly listed with limits in IS 10500; common desirable range used.",
+  },
+  sodium: {
+    min: 0,
+    max: 200,
+    unit: "mg/L",
+    impact: "High levels can be a concern for individuals on low-sodium diets and affect taste.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  bicarbonate: {
+    min: 0,
+    max: 400,
+    unit: "mg/L",
+    impact: "Buffers pH, contributes to alkalinity. High levels can cause digestive issues or scaling.",
+    note: "Not explicitly listed with limits in IS 10500; related to Alkalinity.",
+  },
+  chloride: {
+    min: 0,
+    max: 250,
+    unit: "mg/L",
+    impact: "High levels can impart a salty taste and indicate pollution.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  sulphate: {
+    min: 0,
+    max: 200,
+    unit: "mg/L",
+    impact: "High levels can have a laxative effect and cause taste issues.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  nitrate: {
+    min: 0,
+    max: 45,
+    unit: "mg/L",
+    impact: "High levels can be dangerous, especially for infants (blue baby syndrome). Indicative of agricultural runoff.",
+    note: "Acceptable Limit (IS 10500:2012)",
+  },
+  fluoride: {
+    min: 0.6,
+    max: 1.0,
+    unit: "mg/L",
+    impact: "Optimal levels prevent tooth decay; excessive levels can cause dental and skeletal fluorosis.",
+    note: "Acceptable Limit (IS 10500:2012). Optimal range 0.6-1.0 mg/L.",
+  },
+  tds: {
+    min: 50,
+    max: 500,
+    unit: "mg/L",
+    impact: "Total Dissolved Solids. High TDS can affect taste; very low TDS might be less palatable.",
+    note: "Acceptable Limit (IS 10500:2012)",
+    quality_mapping: [
+      { range: [50, 200], status: "Excellent", color: "text-green-600" },
+      { range: [201, 350], status: "Good", color: "text-lime-600" },
+      { range: [351, 500], status: "Fair", color: "text-yellow-600" },
+      { range: [501, 2000], status: "Poor", color: "text-orange-600" },
+      { range: [2001, Infinity], status: "Unsuitable", color: "text-red-600" },
+    ],
+  },
+  ph: {
+    min: 6.5,
+    max: 8.5,
+    unit: "pH units",
+    impact: "Measures acidity/alkalinity. Deviations can cause corrosion or scale formation and affect taste.",
+    note: "Acceptable Limit (IS 10500:2012)",
+    quality_mapping: [
+      { range: [0, 6.4], status: "Acidic", color: "text-red-600" },
+      { range: [6.5, 8.5], status: "Optimal", color: "text-green-600" },
+      { range: [8.6, Infinity], status: "Alkaline", color: "text-red-600" },
+    ],
+  },
+};
+
+export const OVERALL_WATER_QUALITY_GUIDE = {
+  optimal: {
+    icon: "✅",
+    color: "text-green-700",
+    message: "Water quality appears good based on entered values. Suitable for drinking.",
+  },
+  acceptable: {
+    icon: "⚠️",
+    color: "text-yellow-700",
+    message: "Water quality is acceptable, but some values are at the edge of ideal limits or in permissible range.",
+  },
+  needs_attention: {
+    icon: "🟧",
+    color: "text-orange-700",
+    message: "Some mineral levels are outside acceptable ranges. Further investigation or treatment may be needed.",
+  },
+  unsuitable: {
+    icon: "❌",
+    color: "text-red-700",
+    message: "Water is likely unsuitable for drinking due to significant deviations in mineral levels. Consult an expert.",
+  },
+};
