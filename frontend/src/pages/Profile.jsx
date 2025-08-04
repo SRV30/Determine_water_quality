@@ -104,7 +104,7 @@ const handleQuality = () => {
             onClick={handleOCR}
             className="w-full py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
           >
-            OCR
+            Drinking Bottle Quality Check
           </button>
           <button
             onClick={handleLog}
