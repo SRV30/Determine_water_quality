@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 import { Bar } from "react-chartjs-2";
 import {
@@ -220,6 +221,14 @@ const WaterQualityAnalyzer = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Validate pH to be within 0–14
+    if (name === "ph" && value !== "") {
+      const numValue = parseFloat(value);
+      if (numValue < 0 || numValue > 14) {
+        toast.error("pH value must be between 0 and 14.");
+        return;
+      }
+    }
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -236,6 +245,14 @@ const WaterQualityAnalyzer = () => {
     Object.entries(form).forEach(([key, value]) => {
       if (value && value.trim() !== "") {
         const numValue = parseFloat(value);
+        // Additional pH validation
+        if (key === "ph" && (numValue < 0 || numValue > 14)) {
+          toast.error(
+            "Invalid pH value. Please enter a value between 0 and 14."
+          );
+          setLoading(false);
+          return;
+        }
         if (!isNaN(numValue) && numValue >= 0) {
           filteredData[key] = numValue;
           hasValues = true;
@@ -301,7 +318,6 @@ const WaterQualityAnalyzer = () => {
       }
     });
 
-    // Estimate water safety
     results.safety = {
       value: null,
       unit: "",
@@ -347,23 +363,66 @@ const WaterQualityAnalyzer = () => {
     setOverallQuality(null);
   };
 
-  const saveResults = () => {
+  // New printResults function
+  const printResults = () => {
     if (!analysisResults) {
-      toast.error("No analysis results to save.");
+      toast.error("No analysis results to print.");
       return;
     }
-    const savedResults = JSON.parse(
-      localStorage.getItem("waterQualityResults") || "[]"
-    );
-    savedResults.push({
-      date: new Date().toISOString(),
-      form,
-      analysisResults,
-      overallQuality,
-      standard: selectedStandard,
-    });
-    localStorage.setItem("waterQualityResults", JSON.stringify(savedResults));
-    toast.success("Results saved successfully!");
+    const printContent = `
+      <h2>Water Quality Analysis Report (${selectedStandard} Standards)</h2>
+      <h3>Overall Quality: ${overallQuality.message}</h3>
+      <ul>
+        ${Object.entries(analysisResults)
+          .map(
+            ([key, result]) => `
+              <li>
+                <strong>${
+                  key === "ph"
+                    ? "pH"
+                    : key
+                        .split("_")
+                        .map(
+                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                        )
+                        .join(" ")
+                }:</strong> ${result.value || "N/A"} ${result.unit} (${
+              result.status
+            })<br/>
+                Message: ${result.message}<br/>
+                Impact: ${result.impact}<br/>
+                Standard Range: ${result.standardRange}
+              </li>
+            `
+          )
+          .join("")}
+      </ul>
+      <p>Generated on: ${new Date().toLocaleString()}</p>
+    `;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Water Quality Analysis Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h2 { color: #2b6cb0; }
+            h3 { color: ${
+              overallQuality.color.includes("green")
+                ? "#2f855a"
+                : overallQuality.color.includes("yellow")
+                ? "#b7791f"
+                : "#c53030"
+            }; }
+            ul { list-style-type: none; padding: 0; }
+            li { margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>${printContent}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const chartData = useMemo(() => {
@@ -663,7 +722,7 @@ const WaterQualityAnalyzer = () => {
               🧠 Analyze Water Quality
             </motion.button>
             <motion.button
-              onClick={saveResults}
+              onClick={printResults} // Changed to printResults
               className="bg-green-600 hover:bg-green-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors text-sm sm:text-base"
               disabled={loading || !analysisResults}
               whileHover={{
@@ -672,7 +731,7 @@ const WaterQualityAnalyzer = () => {
               }}
               whileTap={{ scale: 0.95 }}
             >
-              💾 Save Results
+              🖨️ Print Results
             </motion.button>
             <motion.button
               onClick={clearForm}
@@ -830,12 +889,13 @@ const WaterQualityAnalyzer = () => {
               estimated based on parameter compliance.
             </li>
             <li>
-              • Units: pH (unitless), Hardness, Solids, Chloramines, Sulfate,
-              Organic Carbon, Trihalomethanes (mg/L), Conductivity (µS/cm),
-              Turbidity (NTU).
+              • Units: pH (unitless, 0–14), Hardness, Solids, Chloramines,
+              Sulfate, Organic Carbon, Trihalomethanes (mg/L), Conductivity
+              (µS/cm), Turbidity (NTU).
             </li>
             <li>
-              • Save results to track water quality over time (stored locally).
+              • Print results to generate a report of your water quality
+              analysis.
             </li>
             <li>
               • Disclaimer: This tool provides a general analysis. Consult

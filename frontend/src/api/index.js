@@ -50,18 +50,16 @@ export const signupUser = async (name, email, password) => {
     email,
     password,
   });
-  localStorage.setItem("token", res.data.token); // Save token
+  localStorage.setItem("token", res.data.token);
   return res.data;
 };
 
-// Login
 export const loginUser = async (email, password) => {
   const res = await axiosInstance.post("/user/login", { email, password });
-  localStorage.setItem("token", res.data.token); // Save token
+  localStorage.setItem("token", res.data.token);
   return res.data;
 };
 
-// Get logged-in user profile
 export const getProfile = async () => {
   const res = await axiosInstance.get("/user/me");
   return res.data;
@@ -97,8 +95,18 @@ export const getWeeklyWaterLog = async () => {
   return res.data;
 };
 
+export const getLastWeekWaterLog = async () => {
+  const res = await axiosInstance.get("/water-log/last-week");
+  return res.data;
+};
+
 export const getMonthlyWaterLog = async () => {
   const res = await axiosInstance.get("/water-log/month");
+  return res.data;
+};
+
+export const getLastMonthWaterLog = async () => {
+  const res = await axiosInstance.get("/water-log/last-month");
   return res.data;
 };
 

@@ -3,7 +3,9 @@ import {
   addWaterLog,
   getDailyWaterLog,
   getWeeklyWaterLog,
+  getLastWeekWaterLog,
   getMonthlyWaterLog,
+  getLastMonthWaterLog,
   getProfile,
   fetchHealthInfo,
 } from "../api/index";
@@ -21,7 +23,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-// eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 
 ChartJS.register(
@@ -39,14 +40,16 @@ const DrinkWaterLog = () => {
   const [logs, setLogs] = useState([]);
   const [dailyTotal, setDailyTotal] = useState(0);
   const [weeklyTotal, setWeeklyTotal] = useState(0);
+  const [lastWeekTotal, setLastWeekTotal] = useState(0);
   const [monthlyTotal, setMonthlyTotal] = useState(0);
+  const [lastMonthTotal, setLastMonthTotal] = useState(0);
   const [weeklyLogs, setWeeklyLogs] = useState([]);
   const [amount, setAmount] = useState("");
   const [user, setUser] = useState({ age: null, gender: "" });
   const [isPregnant, setIsPregnant] = useState(false);
   const [isLactating, setIsLactating] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [chartType, setChartType] = useState("bar"); // Toggle between bar and line charts
+  const [chartType, setChartType] = useState("bar");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,7 +59,6 @@ const DrinkWaterLog = () => {
         const res = await getProfile();
         setUser(res.user);
         toast.success("Profile loaded");
-
         try {
           const healthRes = await fetchHealthInfo();
           if (healthRes.success && healthRes.healthInfo) {
@@ -87,25 +89,48 @@ const DrinkWaterLog = () => {
     try {
       setLoading(true);
       const dailyData = await getDailyWaterLog();
+      let dailyLogs = [];
+      let dailySum = 0;
       if (Array.isArray(dailyData)) {
-        setLogs(dailyData);
-        setDailyTotal(dailyData.reduce((acc, log) => acc + log.amount, 0));
+        dailyLogs = dailyData;
+        dailySum = dailyData.reduce((acc, log) => acc + log.amount, 0);
       } else if (Array.isArray(dailyData?.logs)) {
-        setLogs(dailyData.logs);
-        setDailyTotal(dailyData.total || 0);
-      } else {
-        setLogs([]);
-        setDailyTotal(0);
+        dailyLogs = dailyData.logs;
+        dailySum =
+          dailyData.total ||
+          dailyData.logs.reduce((acc, log) => acc + log.amount, 0);
       }
+      setLogs(dailyLogs);
+      setDailyTotal(dailySum);
 
       const weeklyData = await getWeeklyWaterLog();
-      setWeeklyLogs(weeklyData.logs || []);
-      setWeeklyTotal(weeklyData.total || 0);
+      const weeklyLogsData = weeklyData.logs || [];
+      const weeklySum =
+        weeklyData.total ||
+        weeklyLogsData.reduce((acc, log) => acc + log.amount, 0);
+      setWeeklyLogs(weeklyLogsData);
+      setWeeklyTotal(weeklySum);
+
+      const lastWeekData = await getLastWeekWaterLog();
+      const lastWeekSum =
+        lastWeekData.total ||
+        (lastWeekData.logs || []).reduce((acc, log) => acc + log.amount, 0);
+      setLastWeekTotal(lastWeekSum);
 
       const monthlyData = await getMonthlyWaterLog();
-      setMonthlyTotal(monthlyData.total || 0);
+      const monthlySum =
+        monthlyData.total ||
+        (monthlyData.logs || []).reduce((acc, log) => acc + log.amount, 0);
+      setMonthlyTotal(monthlySum);
+
+      const lastMonthData = await getLastMonthWaterLog();
+      const lastMonthSum =
+        lastMonthData.total ||
+        (lastMonthData.logs || []).reduce((acc, log) => acc + log.amount, 0);
+      setLastMonthTotal(lastMonthSum);
     } catch (error) {
       console.error("Failed to fetch logs or totals:", error);
+      toast.error("Failed to fetch water intake data");
     } finally {
       setLoading(false);
     }
@@ -163,56 +188,77 @@ const DrinkWaterLog = () => {
     } else if (ageNum > 60) {
       recommended = user.gender === "male" ? 3000 : 2200;
     }
-
     return recommended;
   };
 
-  const getIntakeAnalysis = () => {
+  const getMLHydrationAnalysis = () => {
     if (user.age === null || !user.gender) {
       return {
-        text: "Please ensure your profile includes age and gender for analysis.",
+        score: 0,
+        text: "Please provide age and gender for AI-powered hydration analysis.",
         color: "text-gray-600",
+        recommendation:
+          "Complete your profile to unlock personalized insights.",
       };
     }
     if (parseInt(user.age) <= 1) {
       return {
-        text: "Infants (0-1 years) should primarily get hydration from milk/formula. Consult a pediatrician for water intake.",
+        score: 0,
+        text: "Infants rely on milk/formula. AI analysis not applicable.",
         color: "text-yellow-600",
+        recommendation: "Consult a pediatrician for hydration needs.",
       };
     }
 
-    const recommended = getRecommendedIntake();
-    const difference = dailyTotal - recommended;
-    const percentage = ((dailyTotal / recommended) * 100).toFixed(0);
+    const recommendedDaily = getRecommendedIntake();
+    const weeklyRecommended = recommendedDaily * 7;
+    const monthlyRecommended = recommendedDaily * 30;
 
-    if (difference > 0) {
-      return {
-        text: `You're exceeding the recommended intake of ${(
-          recommended / 1000
-        ).toFixed(1)} liters by ${(difference / 1000).toFixed(
-          2
-        )} liters (${percentage}% of recommended). Great job staying hydrated!`,
-        color: "text-green-600",
-      };
-    } else if (difference < 0) {
-      return {
-        text: `You're ${(Math.abs(difference) / 1000).toFixed(
-          2
-        )} liters below the recommended intake of ${(
-          recommended / 1000
-        ).toFixed(
-          1
-        )} liters (${percentage}% of recommended). Try drinking a bit more!`,
-        color: "text-red-600",
-      };
+    const dailyScore = (dailyTotal / recommendedDaily) * 100;
+    const weeklyScore = (weeklyTotal / weeklyRecommended) * 100;
+    const monthlyScore = (monthlyTotal / monthlyRecommended) * 100;
+    const lastMonthScore = (lastMonthTotal / monthlyRecommended) * 100;
+
+    const trendFactor =
+      weeklyScore > lastWeekTotal / weeklyRecommended ? 1.1 : 0.9;
+    const consistencyFactor =
+      Math.abs(weeklyScore - monthlyScore) < 10 ? 1.2 : 0.8;
+    const healthFactor = isPregnant || isLactating ? 0.9 : 1;
+
+    const hydrationScore = Math.min(
+      100,
+      Math.round(
+        (dailyScore * 0.4 +
+          weeklyScore * 0.3 +
+          monthlyScore * 0.2 +
+          lastMonthScore * 0.1) *
+          trendFactor *
+          consistencyFactor *
+          healthFactor
+      )
+    );
+
+    let text, color, recommendation;
+    if (hydrationScore < 70) {
+      text = `AI-predicted hydration score: ${hydrationScore}/100. Low hydration detected based on your intake patterns.`;
+      color = "text-red-600";
+      recommendation = `Increase daily intake by ${
+        (recommendedDaily - dailyTotal) / 1000
+      } liters. Aim for consistent hydration to avoid risks like fatigue, headaches, or kidney issues.`;
+    } else if (hydrationScore < 90) {
+      text = `AI-predicted hydration score: ${hydrationScore}/100. Moderate hydration level detected.`;
+      color = "text-yellow-600";
+      recommendation = `Boost intake by ${
+        (recommendedDaily * 0.9 - dailyTotal) / 1000
+      } liters daily to optimize hydration and prevent mild symptoms like dry mouth.`;
     } else {
-      return {
-        text: `You're meeting the recommended intake of ${(
-          recommended / 1000
-        ).toFixed(1)} liters exactly (${percentage}% of recommended). Perfect!`,
-        color: "text-blue-600",
-      };
+      text = `AI-predicted hydration score: ${hydrationScore}/100. Optimal hydration level detected.`;
+      color = "text-green-600";
+      recommendation =
+        "Maintain your current intake for sustained health benefits.";
     }
+
+    return { score: hydrationScore, text, color, recommendation };
   };
 
   const weeklyChartData = useMemo(() => {
@@ -267,15 +313,7 @@ const DrinkWaterLog = () => {
         },
       ],
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    weeklyLogs,
-    user.age,
-    user.gender,
-    isPregnant,
-    isLactating,
-    getRecommendedIntake,
-  ]);
+  }, [weeklyLogs, user.age, user.gender, isPregnant, isLactating]);
 
   const dailyChartData = {
     labels: ["Daily Intake", "Recommended"],
@@ -285,6 +323,19 @@ const DrinkWaterLog = () => {
         data: [dailyTotal, getRecommendedIntake() || 0],
         backgroundColor: ["rgba(59, 130, 246, 0.6)", "rgba(34, 197, 94, 0.6)"],
         borderColor: ["rgba(59, 130, 246, 1)", "rgba(34, 197, 94, 1)"],
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const hydrationScoreChartData = {
+    labels: ["Hydration Score"],
+    datasets: [
+      {
+        label: "AI-Predicted Hydration Score",
+        data: [getMLHydrationAnalysis().score],
+        backgroundColor: ["rgba(236, 72, 153, 0.6)"],
+        borderColor: ["rgba(236, 72, 153, 1)"],
         borderWidth: 1,
       },
     ],
@@ -316,6 +367,22 @@ const DrinkWaterLog = () => {
     },
   };
 
+  const scoreChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { position: "top" },
+      title: { display: true, text: "AI-Predicted Hydration Score (0-100)" },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 100,
+        title: { display: true, text: "Score" },
+      },
+      x: { title: { display: true, text: "Metric" } },
+    },
+  };
+
   useEffect(() => {
     fetchLogsAndTotals();
   }, []);
@@ -334,7 +401,6 @@ const DrinkWaterLog = () => {
           <h2 className="text-3xl font-bold text-center text-indigo-700 mb-6">
             Water Intake Log
           </h2>
-
           {user.gender === "female" && (
             <motion.form
               onSubmit={handleUserInfoSubmit}
@@ -373,7 +439,6 @@ const DrinkWaterLog = () => {
               </motion.button>
             </motion.form>
           )}
-
           <motion.form
             onSubmit={handleSubmit}
             className="flex space-x-2 mt-6"
@@ -397,7 +462,6 @@ const DrinkWaterLog = () => {
               Add
             </motion.button>
           </motion.form>
-
           <motion.div
             className="mt-6"
             initial={{ opacity: 0, y: 20 }}
@@ -429,8 +493,19 @@ const DrinkWaterLog = () => {
               >
                 Weekly Trend
               </motion.button>
+              <motion.button
+                className={`px-4 py-2 rounded ${
+                  chartType === "score"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-200 text-gray-700"
+                }`}
+                onClick={() => setChartType("score")}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                AI Score
+              </motion.button>
             </div>
-
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -438,27 +513,39 @@ const DrinkWaterLog = () => {
             >
               {chartType === "bar" ? (
                 <Bar data={dailyChartData} options={chartOptions} />
-              ) : (
+              ) : chartType === "line" ? (
                 <Line data={weeklyChartData} options={chartOptions} />
+              ) : (
+                <Bar
+                  data={hydrationScoreChartData}
+                  options={scoreChartOptions}
+                />
               )}
             </motion.div>
-
             <motion.p
-              className={`font-medium mb-4 ${getIntakeAnalysis().color}`}
+              className={`font-medium mb-4 ${getMLHydrationAnalysis().color}`}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
             >
-              {getIntakeAnalysis().text}
+              {getMLHydrationAnalysis().text}
             </motion.p>
-
+            <motion.p
+              className="font-medium mb-4 text-gray-700"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, type: "spring", stiffness: 100 }}
+            >
+              AI Recommendation: {getMLHydrationAnalysis().recommendation}
+            </motion.p>
             <div className="relative pt-1 mb-4">
               <div className="flex mb-2 items-center justify-between">
                 <span className="text-sm font-semibold text-gray-700">
-                  Progress:{" "}
-                  {((dailyTotal / (getRecommendedIntake() || 1)) * 100).toFixed(
-                    0
-                  )}
+                  Hydration Progress:{" "}
+                  {Math.min(
+                    (dailyTotal / (getRecommendedIntake() || 1)) * 100,
+                    100
+                  ).toFixed(0)}
                   %
                 </span>
               </div>
@@ -482,7 +569,6 @@ const DrinkWaterLog = () => {
                 />
               </div>
             </div>
-
             <p className="text-gray-700 mt-4">
               Total Today: {(dailyTotal / 1000).toFixed(2)} liters
             </p>
@@ -490,7 +576,13 @@ const DrinkWaterLog = () => {
               Total This Week: {(weeklyTotal / 1000).toFixed(2)} liters
             </p>
             <p className="text-gray-700">
+              Total Last Week: {(lastWeekTotal / 1000).toFixed(2)} liters
+            </p>
+            <p className="text-gray-700">
               Total This Month: {(monthlyTotal / 1000).toFixed(2)} liters
+            </p>
+            <p className="text-gray-700">
+              Total Last Month: {(lastMonthTotal / 1000).toFixed(2)} liters
             </p>
             <ul className="space-y-2 mt-4">
               {logs.length === 0 ? (
